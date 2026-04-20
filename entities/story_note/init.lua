@@ -2,7 +2,6 @@ AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 
--- РЕГИСТРИРУЕМ ВСЕ СТРОКИ ЗАРАНЕЕ
 util.AddNetworkString("AdminSetNoteText")
 util.AddNetworkString("ShowStoryNote")
 
@@ -18,14 +17,20 @@ end
 function ENT:Use(activator, caller)
     if not IsValid(activator) or not activator:IsPlayer() then return end
 
+    -- Режим редактора для админа (Shift + E)
     if activator:IsSuperAdmin() and activator:KeyDown(IN_SPEED) then
         net.Start("AdminSetNoteText")
-            net.WriteEntity(self) -- ИСПРАВЛЕНО (было Entity)
+            net.WriteEntity(self)
         net.Send(activator)
     else
+        -- Обычное прочтение
         net.Start("ShowStoryNote")
             net.WriteString(self:GetNoteText() or "Тут пусто.")
         net.Send(activator)
+
+        -- [ВОТ ТУТ ПРАВИЛЬНОЕ МЕСТО ДЛЯ ХУКА]
+        -- Сообщаем системе сюжета, что эта записка прочитана
+        hook.Run("OnStoryNoteRead", self, activator)
     end
 end
 
@@ -34,11 +39,7 @@ net.Receive("AdminSetNoteText", function(len, ply)
     local ent = net.ReadEntity()
     local text = net.ReadString()
     
-    -- Добавляем проверку безопасности
     if IsValid(ent) and ent:GetClass() == "story_note" then
         ent:SetNoteText(text)
-        -- Чтобы изменения сохранились при перезагрузке (опционально)
-        ent:Activate() 
     end
 end)
-

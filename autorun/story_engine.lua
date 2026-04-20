@@ -66,7 +66,7 @@ if SERVER then
         end
     end)
 
-    hook.Add("Think", "StoryZoneLogic", function()
+     hook.Add("Think", "StoryZoneLogic", function()
         if not StoryStarted or not StorySteps or IsWaiting then return end
         if (next_check or 0) > CurTime() then return end
         next_check = CurTime() + 0.5
@@ -76,14 +76,19 @@ if SERVER then
 
         local stepTriggered = false
 
-        -- Проверяем, выполнил ли ХОТЯ БЫ ОДИН игрок условие
         for _, ply in ipairs(player.GetAll()) do
             if not ply:Alive() then continue end
 
             local targetPos = data.waitPos or data.pos
             local dist = ply:GetPos():Distance(targetPos)
 
-            if data.isInteract then
+            -- НОВАЯ ЛОГИКА: Проверка записки
+            if data.isNote then
+                if dist < 200 and ply.HasReadNote then 
+                    stepTriggered = true 
+                    break 
+                end
+            elseif data.isInteract then
                 if dist < 100 and ply:KeyDown(IN_USE) then stepTriggered = true break end
             else
                 if dist < 200 then stepTriggered = true break end
@@ -93,7 +98,9 @@ if SERVER then
         if stepTriggered then
             IsWaiting = true
             
-            -- Звук и сообщение всем
+            -- Сбрасываем флаг чтения для следующего шага
+            for _, p in ipairs(player.GetAll()) do p.HasReadNote = false end
+            
             for _, p in ipairs(player.GetAll()) do
                 p:EmitSound("buttons/button14.wav", 60, 100)
                 p:PrintMessage(HUD_PRINTCENTER, "ЗАДАНИЕ ВЫПОЛНЕНО")
@@ -114,6 +121,15 @@ if SERVER then
                 end
             end)
         end
+    end)
+
+    -- ХУК: Ловим момент прочтения записки
+    hook.Add("OnStoryNoteRead", "RegisterNoteProgress", function(noteEnt, ply)
+        if not IsValid(ply) then return end
+        
+        -- Помечаем, что игрок прочитал записку
+        ply.HasReadNote = true
+        ply:ChatPrint("[!] Вы изучили информацию.") 
     end)
 end
 

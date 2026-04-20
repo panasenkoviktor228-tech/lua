@@ -3,6 +3,7 @@
 -- ==========================================
 
 if SERVER then
+    AddCSLuaFile()
     resource.AddFile("sound/flashLightHum.wav")    
     util.AddNetworkString("SyncCustomFlashlight")
     hook.Add("PlayerSwitchFlashlight", "BlockAllFlashlights", function(ply) return false end)
