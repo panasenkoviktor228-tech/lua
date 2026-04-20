@@ -6,27 +6,25 @@ StorySteps = StorySteps or {}
 if SERVER then
 
     hook.Add("PlayerInitialSpawn", "InitPlayerStoryFlags", function(ply)
-    ply.HasReadNote = false
-end)
+        ply.HasReadNote = false
+    end)
 
-    local IsWaiting = false -- Общий статус ожидания перехода
+    local IsWaiting = false 
     local next_check = 0
     local StoryStarted = false
-    SERVER_StoryStep = 0 -- Глобальный шаг для всего сервера
+    SERVER_StoryStep = 0 
 
-    util.AddNetworkString("SyncStoryStep") -- Для мгновенного обновления HUD
+    util.AddNetworkString("SyncStoryStep") 
 
     local function RunStepCommands(stepID)
         if not StorySteps or not StorySteps[stepID] then return end
         local data = StorySteps[stepID]
         if not data.onStart then return end
         
-        -- Выполняем серверные команды
         for _, cmd in ipairs(data.onStart.server or {}) do
             game.ConsoleCommand(cmd .. "\n")
         end
 
-        -- Выполняем клиентские команды для ВСЕХ
         for _, cmd in ipairs(data.onStart.client or {}) do
             for _, p in ipairs(player.GetAll()) do
                 p:ConCommand(cmd)
@@ -34,15 +32,13 @@ end)
         end
     end
 
-    -- Функция для смены шага всем игрокам
-        local function SetGlobalStep(step)
+    local function SetGlobalStep(step)
         SERVER_StoryStep = step
-        SetGlobalInt("CurrentStoryStep", step) -- Правильная функция GMod
+        SetGlobalInt("CurrentStoryStep", step) 
         net.Start("SyncStoryStep")
             net.WriteInt(step, 16)
         net.Broadcast()
     end
-
 
     concommand.Add("sv_start_story", function(ply, cmd, args)
         if IsValid(ply) and not ply:IsSuperAdmin() then return end
@@ -54,7 +50,6 @@ end)
             include(fileName)
             AddCSLuaFile(fileName)
             
-            -- Заставляем всех клиентов подгрузить файл главы
             for _, p in ipairs(player.GetAll()) do
                 p:SendLua([[include("]] .. fileName .. [[")]])
             end
@@ -71,7 +66,7 @@ end)
         end
     end)
 
-     hook.Add("Think", "StoryZoneLogic", function()
+    hook.Add("Think", "StoryZoneLogic", function()
         if not StoryStarted or not StorySteps or IsWaiting then return end
         if (next_check or 0) > CurTime() then return end
         next_check = CurTime() + 0.5
@@ -87,7 +82,6 @@ end)
             local targetPos = data.waitPos or data.pos
             local dist = ply:GetPos():Distance(targetPos)
 
-            -- НОВАЯ ЛОГИКА: Проверка записки
             if data.isNote then
                 if dist < 200 and ply.HasReadNote then 
                     stepTriggered = true 
@@ -102,8 +96,6 @@ end)
 
         if stepTriggered then
             IsWaiting = true
-            
-            -- Сбрасываем флаг чтения для следующего шага
             for _, p in ipairs(player.GetAll()) do p.HasReadNote = false end
             
             for _, p in ipairs(player.GetAll()) do
@@ -128,15 +120,30 @@ end)
         end
     end)
 
-    -- ХУК: Ловим момент прочтения записки
     hook.Add("OnStoryNoteRead", "RegisterNoteProgress", function(noteEnt, ply)
         if not IsValid(ply) then return end
-        
-        -- Помечаем, что игрок прочитал записку
         ply.HasReadNote = true
         ply:ChatPrint("[!] Вы изучили информацию.") 
     end)
-end
+
+    -- Функции звука
+    function CreateStorySound(soundPath, position)
+        for _, old in ipairs(ents.FindByName("StorySoundSource")) do old:Remove() end
+
+        local target = ents.Create("info_target")
+        target:SetPos(position)
+        target:SetName("StorySoundSource")
+        target:Spawn()
+        target:EmitSound(soundPath, 75, 100, 1, CHAN_AUTO)
+    end
+
+    function StopStorySound()
+        for _, ent in ipairs(ents.FindByName("StorySoundSource")) do
+            ent:Remove() -- Удаление энтити само прекратит звук
+        end
+    end
+
+end -- КОНЕЦ SERVER БЛОКА
 
 if CLIENT then
     local CurrentStep = 0
