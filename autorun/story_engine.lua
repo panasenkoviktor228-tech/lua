@@ -4,7 +4,6 @@
 StorySteps = StorySteps or {}
 
 if SERVER then
-
     hook.Add("PlayerInitialSpawn", "InitPlayerStoryFlags", function(ply)
         ply.HasReadNote = false
     end)
@@ -75,18 +74,13 @@ if SERVER then
         if not data then return end
 
         local stepTriggered = false
-
         for _, ply in ipairs(player.GetAll()) do
             if not ply:Alive() then continue end
-
             local targetPos = data.waitPos or data.pos
             local dist = ply:GetPos():Distance(targetPos)
 
             if data.isNote then
-                if dist < 200 and ply.HasReadNote then 
-                    stepTriggered = true 
-                    break 
-                end
+                if dist < 200 and ply.HasReadNote then stepTriggered = true break end
             elseif data.isInteract then
                 if dist < 100 and ply:KeyDown(IN_USE) then stepTriggered = true break end
             else
@@ -97,7 +91,6 @@ if SERVER then
         if stepTriggered then
             IsWaiting = true
             for _, p in ipairs(player.GetAll()) do p.HasReadNote = false end
-            
             for _, p in ipairs(player.GetAll()) do
                 p:EmitSound("buttons/button14.wav", 60, 100)
                 p:PrintMessage(HUD_PRINTCENTER, "ЗАДАНИЕ ВЫПОЛНЕНО")
@@ -126,10 +119,9 @@ if SERVER then
         ply:ChatPrint("[!] Вы изучили информацию.") 
     end)
 
-    -- Функции звука
+    -- ФУНКЦИИ ЗВУКА (ИСПРАВЛЕННЫЕ)
     function CreateStorySound(soundPath, position)
         for _, old in ipairs(ents.FindByName("StorySoundSource")) do old:Remove() end
-
         local target = ents.Create("info_target")
         target:SetPos(position)
         target:SetName("StorySoundSource")
@@ -139,15 +131,13 @@ if SERVER then
 
     function StopStorySound()
         for _, ent in ipairs(ents.FindByName("StorySoundSource")) do
-            ent:Remove() -- Удаление энтити само прекратит звук
+            ent:Remove()
         end
     end
-
-end -- КОНЕЦ SERVER БЛОКА
+end -- Конец SERVER
 
 if CLIENT then
     local CurrentStep = 0
-
     net.Receive("SyncStoryStep", function()
         CurrentStep = net.ReadInt(16)
     end)
@@ -156,17 +146,12 @@ if CLIENT then
         if not StorySteps or CurrentStep == 0 then return end
         local data = StorySteps[CurrentStep]
         if not data then return end
-
         draw.SimpleText("ОБЩАЯ ЗАДАЧА: " .. data.msg, "GModNotify", ScrW()/2, ScrH() - 80, Color(255, 255, 255), TEXT_ALIGN_CENTER)
-
         if data.hideMarker then return end
-
         local lp = LocalPlayer()
         local dist_to_marker = lp:GetPos():Distance(data.pos)
         local dist_meters = math.floor(dist_to_marker * 0.019)
-        
         draw.SimpleText("РАССТОЯНИЕ: " .. dist_meters .. "м", "GModNotify", ScrW()/2, ScrH() - 60, Color(255, 200, 0), TEXT_ALIGN_CENTER)
-
         local screenPos = data.pos:ToScreen()
         if screenPos.visible then
             draw.SimpleText("!", "DermaLarge", screenPos.x, screenPos.y, Color(255, 200, 0), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
