@@ -4,6 +4,11 @@
 StorySteps = StorySteps or {}
 
 if SERVER then
+
+    hook.Add("PlayerInitialSpawn", "InitPlayerStoryFlags", function(ply)
+    ply.HasReadNote = false
+end)
+
     local IsWaiting = false -- Общий статус ожидания перехода
     local next_check = 0
     local StoryStarted = false
